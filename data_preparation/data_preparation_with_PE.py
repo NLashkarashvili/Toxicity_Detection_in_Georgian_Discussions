@@ -57,7 +57,7 @@ class CommentPreparator(object):
 comment_prep = CommentPreparator()
 data['comment'] = data['comment'].apply(comment_prep)
 
-vectorizer = TextVectorization(max_tokens=40000, output_sequence_length=100)
+vectorizer = TextVectorization(max_tokens=40000, output_sequence_length=25)
 text_ds = tf.data.Dataset.from_tensor_slices(data['comment']).batch(128)
 vectorizer.adapt(text_ds)
 

@@ -1,5 +1,6 @@
 import tensorflow as tf
-from kerashypetune import KerasGridSearch
+import scipy.stats as stats
+from kerashypetune import KerasRandomSearch
 from gensim import models
 from tensorflow import keras
 from tensorflow.keras import layers
@@ -42,7 +43,7 @@ class TokenAndPositionEmbedding(layers.Layer):
     
 
 ##model for FastText pretrained embeddings (embed_dim set to 300)
-def get_model(param, maxlen=100, vocab_size=vocab_size, num_heads=8, embed_dim=300):
+def get_model(param, maxlen=25, vocab_size=vocab_size, num_heads=8, embed_dim=300):
     
     inputs = layers.Input(shape=(maxlen,))
     embedding_layer = layers.Embedding(input_dim = vocab_size, output_dim=embed_dim, 
@@ -67,24 +68,25 @@ for train_index, test_index in sss.split(data['comment'], data['label']):
     
 param_grid = {
     'unit_1': [32, 64, 128], 
-    'dropout': [0.2, 0.3, 0.4],
-    'lr': [1e-3, 1e-4], 
+    'dropout': [0.1, 0.2, 0.3, 0.4, 0.5],
+    'lr': stats.uniform(1e-4, 1e-2),
     'epochs': 5, 
-    'batch_size': 128
+    'batch_size': [32, 64, 128]
 }
 
 X_train = vectorizer(np.array([[s] for s in X_train])).numpy()
 X_test = vectorizer(np.array([[s] for s in X_test])).numpy()
-X_train = keras.preprocessing.sequence.pad_sequences(X_train, maxlen=100)
-X_test =  keras.preprocessing.sequence.pad_sequences(X_test, maxlen=100)
+X_train = keras.preprocessing.sequence.pad_sequences(X_train, maxlen=25)
+X_test =  keras.preprocessing.sequence.pad_sequences(X_test, maxlen=25)
 
-kgs = KerasGridSearch(get_model, param_grid, monitor='val_auc', greater_is_better=True)
+kgs = KerasRandomSearch(get_model, param_grid, monitor='val_auc', greater_is_better=True,
+                        n_iter=15)
 kgs.search(X_train, y_train, validation_data=(X_test, y_test))
 print(kgs.best_params)
 
 ##############################################################################
 ##model without FastText Embeddings
-def get_model(param, maxlen=100, vocab_size=n_word_unique, num_heads=8):
+def get_model(param, maxlen=25, vocab_size=n_word_unique + 1, num_heads=8):
     
     inputs = layers.Input(shape=(maxlen,))
     embedding_layer = layers.Embedding(input_dim = vocab_size, output_dim=param['embed_dim'], 
@@ -110,16 +112,18 @@ for train_index, test_index in sss.split(data['comment'], data['label']):
     
 param_grid = {
     'unit_1': [32, 64, 128], 
-    'dropout': [0.2, 0.3, 0.4],
+    'dropout': [0.1, 0.2, 0.3, 0.4, 0.5],
     'embed_dim': [32, 64, 128],
-    'lr': [1e-3, 1e-4], 
+    'lr': stats.uniform(1e-4, 1e-2),
     'epochs': 5, 
-    'batch_size': 128
+    'batch_size': [32, 64, 128]
 }
 
-X_train = keras.preprocessing.sequence.pad_sequences(X_train, maxlen=100)
-X_test =  keras.preprocessing.sequence.pad_sequences(X_test, maxlen=100)
 
-kgs = KerasGridSearch(get_model, param_grid, monitor='val_auc', greater_is_better=True)
+X_train = keras.preprocessing.sequence.pad_sequences(X_train, maxlen=25)
+X_test =  keras.preprocessing.sequence.pad_sequences(X_test, maxlen=25)
+
+kgs = KerasRandomSearch(get_model, param_grid, monitor='val_auc', greater_is_better=True,
+                        n_iter=15)
 kgs.search(X_train, y_train, validation_data=(X_test, y_test))
 print(kgs.best_params)
